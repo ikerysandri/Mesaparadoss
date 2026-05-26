@@ -149,11 +149,11 @@ const RESTAURANTS = [
 ];
 
 const PRICE_RANGES = [
-  {key:"budget",  label:"Menos de 20€", emoji:"💶",    color:"#4caf50"},
-  {key:"mid",     label:"20€ – 40€",    emoji:"💶💶",   color:"#8bc34a"},
-  {key:"midplus", label:"40€ – 70€",    emoji:"💶💶💶",  color:"#e6a817"},
-  {key:"high",    label:"70€ – 120€",   emoji:"💶💶💶💶", color:"#ff7043"},
-  {key:"luxury",  label:"Más de 120€",  emoji:"💎",    color:"#9c27b0"},
+  {key:"budget",  label:"Menos de 30€", emoji:"💶",    color:"#4caf50"},
+  {key:"mid",     label:"30€ – 50€",    emoji:"💶💶",   color:"#8bc34a"},
+  {key:"midplus", label:"50€ – 70€",    emoji:"💶💶💶",  color:"#e6a817"},
+  {key:"high",    label:"70€ o más",   emoji:"💶💶💶💶", color:"#ff7043"},
+  {key:"luxury",  label:"Estrella michelín",  emoji:"⭐",    color:"#9c27b0"},
 ];
 
 const CRITERIA = [
