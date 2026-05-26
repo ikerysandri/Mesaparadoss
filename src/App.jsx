@@ -857,6 +857,23 @@ export default function App() {
                     </button>
                     <button onClick={()=>{markVisited(r.id);setPendSearch("");}} className="btn-o"
                       style={{padding:"7px 14px",borderRadius:10,fontSize:13,whiteSpace:"nowrap"}}>✅ Ya fui</button>
+                    
+                    {/* 🗑️ NUEVO BOTÓN DE BORRADO */}
+                    <button onClick={() => deleteRestaurant(r.id)} 
+                      style={{
+                        padding: "7px 10px", 
+                        borderRadius: 10, 
+                        fontSize: 13, 
+                        background: "none", 
+                        border: "1px solid var(--red)", 
+                        color: "var(--red)", 
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}>
+                      🗑️
+                    </button>
                   </div>
                 </div>
               ))}
