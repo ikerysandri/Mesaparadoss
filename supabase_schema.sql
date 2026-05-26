@@ -30,17 +30,6 @@ create table if not exists ratings (
   unique(restaurant_id)
 );
 
-ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS comment text default null;
-
-CREATE OR REPLACE VIEW restaurants_with_ratings AS
-  SELECT
-    r.*,
-    rat.sabor, rat.rcp, rat.ambiente, rat.servicio,
-    rat.repetiria, rat.wow, rat.experiencia,
-    rat.updated_at as rated_at
-  FROM restaurants r
-  LEFT JOIN ratings rat ON r.id = rat.restaurant_id;
-
 -- Activar Row Level Security (lectura pública, escritura pública para que funcione sin login)
 alter table restaurants enable row level security;
 alter table ratings enable row level security;

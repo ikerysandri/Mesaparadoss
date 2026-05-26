@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { supabase } from "./supabase.js";
+import { supabase } from "../supabase.js";
 
 /* ─── STYLES ─── */
 const FontLoader = () => (
@@ -214,8 +214,6 @@ const INITIAL_RESTAURANTS = [
   {name:"StreetXO",visited:true,lat:40.4390,lng:-3.6870},
 ];
 
-const [commentTarget, setCommentTarget] = useState(null);
-
 /* ─── HELPERS ─── */
 function getAvg(ratings) {
   if (!ratings) return null;
@@ -413,11 +411,6 @@ function RankCard({r,rank,onRate}) {
             {r.food_type&&<span style={{fontSize:10,background:"#1a120812",color:"var(--text)",padding:"1px 7px",borderRadius:20,fontWeight:600}}>{r.food_type}</span>}
             {r.price_range&&<PriceBadge priceKey={r.price_range}/>}
             {r.ratings&&CRITERIA.map(c=><span key={c.key} style={{fontSize:10,color:"var(--muted)",background:"var(--cream)",padding:"1px 6px",borderRadius:6}}>{c.icon}<strong style={{color:"var(--text)"}}>{r.ratings[c.key]}</strong></span>)}
-            {r.comment && (
-              <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 6, fontStyle: "italic", lineHeight: 1.5 }}>
-                "{r.comment}"
-              </p>
-            )}
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -571,27 +564,6 @@ function FrontPage({onEnter,total,visited}) {
 }
 
 /* ─── MAIN APP ─── */
-function CommentModal({ restaurant, onSave, onClose }) {
-  const [text, setText] = useState(restaurant.comment || "");
-  return (
-    <Modal onClose={onClose}>
-      <p style={{ fontSize: 11, color: "var(--gold)", fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>Comentario</p>
-      <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, color: "var(--dark)", marginBottom: 16 }}>{restaurant.name}</h2>
-      <textarea
-        placeholder="¿Qué recordáis de este sitio? Platos que pedisteis, anécdotas, qué pedir la próxima vez..."
-        value={text}
-        onChange={e => setText(e.target.value)}
-        rows={6}
-        style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid var(--warm)", background: "#fff", fontSize: 14, color: "var(--dark)", outline: "none", resize: "vertical", lineHeight: 1.6 }}
-      />
-      <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-        <button onClick={onClose} className="btn-o" style={{ flex: 1, padding: "12px", borderRadius: 12, fontSize: 14 }}>Cancelar</button>
-        <button onClick={() => onSave(text)} className="btn-g" style={{ flex: 2, padding: "12px", borderRadius: 12, fontSize: 15 }}>Guardar 💬</button>
-      </div>
-    </Modal>
-  );
-}
-
 export default function App() {
   const [page,setPage]=useState("front");
   const [rests,setRests]=useState([]);
@@ -667,20 +639,13 @@ export default function App() {
     setTarget(null);
   }, [loadRestaurants]);
 
-  /* ── Save comment ── */
-  const saveComment = useCallback(async (id, comment) => {
-    await supabase.from("restaurants").update({ comment }).eq("id", id);
-    await loadRestaurants();
-    setCommentTarget(null);
-  }, [loadRestaurants]);
-
   /* ── Mark visited ── */
   const markVisited = useCallback(async (id) => {
     await supabase.from("restaurants").update({ visited: true }).eq("id", id);
     await loadRestaurants();
   }, [loadRestaurants]);
 
-  /* ── Delete restaurant ── */
+  /* ── Delete visited ── */
   const deleteRestaurant = useCallback(async (id) => {
     // Confirmación nativa para evitar borrados por error
     const confirmacion = window.confirm("¿Seguro que quieres eliminar este restaurante de la lista?");
@@ -842,10 +807,6 @@ export default function App() {
                         style={{padding:"6px 12px",borderRadius:8,fontSize:12,fontWeight:700,border:"none",cursor:"pointer",whiteSpace:"nowrap"}}>
                         🔍 Google
                       </button>
-                      <button onClick={()=>setCommentTarget(r)}
-                        style={{padding:"6px 12px",borderRadius:8,fontSize:12,fontWeight:700,border:"1.5px solid var(--warm)",background:r.comment?"#c9a84c22":"#fff",color:r.comment?"var(--gold)":"var(--muted)",cursor:"pointer",whiteSpace:"nowrap"}}>
-                        {r.comment ? "💬 Ver" : "💬 Añadir"}
-                      </button>
                     </div>
                   </div>
                 );
@@ -896,23 +857,6 @@ export default function App() {
                     </button>
                     <button onClick={()=>{markVisited(r.id);setPendSearch("");}} className="btn-o"
                       style={{padding:"7px 14px",borderRadius:10,fontSize:13,whiteSpace:"nowrap"}}>✅ Ya fui</button>
-                    
-                    {/* 🗑️ NUEVO BOTÓN DE BORRADO */}
-                    <button onClick={() => deleteRestaurant(r.id)} 
-                      style={{
-                        padding: "7px 10px", 
-                        borderRadius: 10, 
-                        fontSize: 13, 
-                        background: "none", 
-                        border: "1px solid var(--red)", 
-                        color: "var(--red)", 
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}>
-                      🗑️
-                    </button>
                   </div>
                 </div>
               ))}
@@ -932,13 +876,6 @@ export default function App() {
 
       {target&&<RatingModal restaurant={target} onSave={(r,p,f)=>saveRating(target.id,r,p,f)} onClose={()=>setTarget(null)}/>}
       {showAdd&&<AddModal onSave={addRestaurant} onClose={()=>setShowAdd(false)}/>}
-      {commentTarget && (
-      <CommentModal
-        restaurant={commentTarget}
-        onSave={(text) => saveComment(commentTarget.id, text)}
-        onClose={() => setCommentTarget(null)}
-      />
-    )}
     </>
   );
 }
