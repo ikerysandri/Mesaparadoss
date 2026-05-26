@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { supabase } from "../supabase.js";
+import { supabase } from "./supabase.js";
 
 /* ─── STYLES ─── */
 const FontLoader = () => (
