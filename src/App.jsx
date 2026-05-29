@@ -409,10 +409,15 @@ function AddModal({onSave,onClose}) {
         Ya lo hemos visitado — puntuar ahora
       </label>
       <FoodTypeSelector value={foodType} onChange={setFoodType}/>
+      <div style={{marginBottom:16}}>
+        <p style={{fontSize:13,color:"var(--text)",fontWeight:600,marginBottom:6}}>💬 Comentario / Notas</p>
+        <textarea placeholder="¿Qué recordáis? Platos destacados, qué pedir la próxima vez..." value={comment} onChange={e=>setComment(e.target.value)} rows={3}
+          style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1.5px solid var(--warm)",background:"#fff",fontSize:13,color:"var(--dark)",outline:"none",resize:"vertical",lineHeight:1.5}}/>
+      </div>
       {form.visited&&<><PriceSelector value={priceRange} onChange={setPriceRange}/>{CRITERIA.map(c=><CriterionBlock key={c.key} criterion={c} answers={answers[c.key]} onChange={vals=>setAnswers(a=>({...a,[c.key]:vals}))}/>)}</>}
       <div style={{display:"flex",gap:10,marginTop:20}}>
         <button onClick={onClose} className="btn-o" style={{flex:1,padding:"12px",borderRadius:12,fontSize:14}}>Cancelar</button>
-        <button onClick={()=>{if(!form.name.trim())return;onSave({...form,ratings:form.visited?ratings:null,price_range:form.visited?priceRange:null,food_type:foodType,comment:comment||null,comment:comment||null,lat:40.4168+(Math.random()-.5)*.04,lng:-3.7038+(Math.random()-.5)*.04});}} className="btn-g" style={{flex:2,padding:"12px",borderRadius:12,fontSize:15}}>Agregar</button>
+        <button onClick={()=>{if(!form.name.trim())return;onSave({...form,ratings:form.visited?ratings:null,price_range:form.visited?priceRange:null,food_type:foodType,comment:comment||null,lat:40.4168+(Math.random()-.5)*.04,lng:-3.7038+(Math.random()-.5)*.04});}} className="btn-g" style={{flex:2,padding:"12px",borderRadius:12,fontSize:15}}>Agregar</button>
       </div>
     </Modal>
   );
@@ -603,17 +608,18 @@ export default function App() {
   const [commentTarget,setCommentTarget]=useState(null);
   const [filterType,setFilterType]=useState(null);
   const [showTypeFilter,setShowTypeFilter]=useState(false);
+  const [dbError,setDbError]=useState(null);
 
   /* ── Supabase: load all restaurants ── */
   const loadRestaurants = useCallback(async () => {
     setLoading(true);
+    setDbError(null);
     try {
       const { data, error } = await supabase
         .from("restaurants_with_ratings")
         .select("*")
         .order("name");
       if (error) throw error;
-      // Map DB fields to local shape
       const mapped = (data||[]).map(r => ({
         ...r,
         ratings: r.sabor != null ? {
@@ -624,8 +630,7 @@ export default function App() {
       setRests(mapped);
     } catch(e) {
       console.error("Error loading:", e);
-      // Fallback to initial data if Supabase not configured
-      setRests(INITIAL_RESTAURANTS.map((r,i)=>({...r,id:i+1,ratings:null,price_range:null,food_type:null})));
+      setDbError("Error de conexión con la base de datos: " + e.message);
     }
     setLoading(false);
   }, []);
@@ -649,21 +654,26 @@ export default function App() {
   /* ── Save rating ── */
   const saveRating = useCallback(async (id, ratings, priceRange, foodType) => {
     try {
-      // Update restaurant meta
-      await supabase.from("restaurants").update({
+      const { error: err1 } = await supabase.from("restaurants").update({
         visited: true,
         price_range: priceRange,
         food_type: foodType,
       }).eq("id", id);
-      // Upsert rating
-      await supabase.from("ratings").upsert({
+      if (err1) throw err1;
+
+      const { error: err2 } = await supabase.from("ratings").upsert({
         restaurant_id: id,
         ...ratings,
         updated_at: new Date().toISOString(),
       }, { onConflict: "restaurant_id" });
+      if (err2) throw err2;
+
       await loadRestaurants();
-    } catch(e) { console.error("Save error:", e); }
-    setTarget(null);
+      setTarget(null);
+    } catch(e) {
+      console.error("Save error:", e);
+      alert("Error al guardar: " + e.message);
+    }
   }, [loadRestaurants]);
 
   /* ── Save comment ── */
@@ -777,6 +787,10 @@ export default function App() {
         </div>
 
         <div style={{maxWidth:1000,margin:"0 auto",padding:"28px 16px"}}>
+          {dbError&&<div style={{background:"#8b2c2c",color:"#fff",padding:"12px 16px",borderRadius:12,marginBottom:16,fontSize:13,lineHeight:1.5}}>
+            ⚠️ <strong>Error de base de datos:</strong> {dbError}<br/>
+            <span style={{fontSize:12,opacity:.8}}>Comprueba las variables de entorno VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en Vercel.</span>
+          </div>}
           {loading && <Spinner/>}
           {!loading && <>
 
@@ -867,7 +881,7 @@ export default function App() {
                         {r.comment?"💬 Ver":"💬 Nota"}
                       </button>
                     </div>
-                  {r.comment&&<p style={{fontSize:12,color:"var(--muted)",marginTop:4,fontStyle:"italic",paddingLeft:2}}>"{r.comment}"</p>}
+                    {r.comment&&<p style={{fontSize:12,color:"var(--muted)",marginTop:6,fontStyle:"italic",paddingLeft:2,borderTop:"1px solid var(--warm)",paddingTop:8}}>💬 {r.comment}</p>}
                   </div>
                 );
               })}
@@ -951,7 +965,6 @@ export default function App() {
         </div>
       </div>
 
-      {commentTarget&&<CommentModal restaurant={commentTarget} onSave={(text)=>saveComment(commentTarget.id,text)} onClose={()=>setCommentTarget(null)}/> }
       {commentTarget&&<CommentModal restaurant={commentTarget} onSave={(text)=>saveComment(commentTarget.id,text)} onClose={()=>setCommentTarget(null)}/>}
       {target&&<RatingModal restaurant={target} onSave={(r,p,f)=>saveRating(target.id,r,p,f)} onClose={()=>setTarget(null)}/>}
       {showAdd&&<AddModal onSave={addRestaurant} onClose={()=>setShowAdd(false)}/>}
