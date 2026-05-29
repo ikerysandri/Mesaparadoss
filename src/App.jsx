@@ -867,8 +867,8 @@ export default function App() {
                         {r.comment?"💬 Ver":"💬 Nota"}
                       </button>
                     </div>
-                  </div>
                   {r.comment&&<p style={{fontSize:12,color:"var(--muted)",marginTop:4,fontStyle:"italic",paddingLeft:2}}>"{r.comment}"</p>}
+                  </div>
                 );
               })}
             </div>
