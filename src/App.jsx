@@ -685,14 +685,6 @@ export default function App() {
     setCommentTarget(null);
   }, [loadRestaurants]);
 
-  /* ── Delete restaurant ── */
-  const deleteRestaurant = useCallback(async (id) => {
-    if (!window.confirm("¿Seguro que quieres eliminar este restaurante? Esta acción no se puede deshacer.")) return;
-    await supabase.from("ratings").delete().eq("restaurant_id", id);
-    await supabase.from("restaurants").delete().eq("id", id);
-    await loadRestaurants();
-  }, [loadRestaurants]);
-
   /* ── Mark visited ── */
   const markVisited = useCallback(async (id) => {
     await supabase.from("restaurants").update({ visited: true }).eq("id", id);
