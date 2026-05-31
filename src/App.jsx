@@ -348,6 +348,7 @@ function RatingModal({restaurant,onSave,onClose}) {
   const [answers,setAnswers]=useState(restaurant.ratings?ratingsToAnswers(restaurant.ratings):initAnswers());
   const [priceRange,setPriceRange]=useState(restaurant.price_range||null);
   const [foodType,setFoodType]=useState(restaurant.food_type||null);
+  const [comment,setComment]=useState(restaurant.comment||"");
   const ratings=answersToRatings(answers);
   const avg=getAvg(ratings);
   if (!unlocked) return <PinModal onSuccess={()=>setUnlocked(true)} onClose={onClose}/>;
@@ -367,7 +368,7 @@ function RatingModal({restaurant,onSave,onClose}) {
       {CRITERIA.map(c=><CriterionBlock key={c.key} criterion={c} answers={answers[c.key]} onChange={vals=>setAnswers(a=>({...a,[c.key]:vals}))}/>)}
       <div style={{display:"flex",gap:10,marginTop:20}}>
         <button onClick={onClose} className="btn-o" style={{flex:1,padding:"12px",borderRadius:12,fontSize:14}}>Cancelar</button>
-        <button onClick={()=>onSave(ratings,priceRange,foodType)} className="btn-g" style={{flex:2,padding:"12px",borderRadius:12,fontSize:15}}>Guardar ★</button>
+        <button onClick={()=>onSave(ratings,priceRange,foodType,comment)} className="btn-g" style={{flex:2,padding:"12px",borderRadius:12,fontSize:15}}>Guardar ★</button>
       </div>
     </Modal>
   );
@@ -652,12 +653,13 @@ export default function App() {
   }, [page]);
 
   /* ── Save rating ── */
-  const saveRating = useCallback(async (id, ratings, priceRange, foodType) => {
+  const saveRating = useCallback(async (id, ratings, priceRange, foodType, comment) => {
     try {
       const { error: err1 } = await supabase.from("restaurants").update({
         visited: true,
         price_range: priceRange,
         food_type: foodType,
+        comment: comment||null,
       }).eq("id", id);
       if (err1) throw err1;
 
@@ -966,7 +968,7 @@ export default function App() {
       </div>
 
       {commentTarget&&<CommentModal restaurant={commentTarget} onSave={(text)=>saveComment(commentTarget.id,text)} onClose={()=>setCommentTarget(null)}/>}
-      {target&&<RatingModal restaurant={target} onSave={(r,p,f)=>saveRating(target.id,r,p,f)} onClose={()=>setTarget(null)}/>}
+      {target&&<RatingModal restaurant={target} onSave={(r,p,f,cm)=>saveRating(target.id,r,p,f,cm)} onClose={()=>setTarget(null)}/>}
       {showAdd&&<AddModal onSave={addRestaurant} onClose={()=>setShowAdd(false)}/>}
     </>
   );
