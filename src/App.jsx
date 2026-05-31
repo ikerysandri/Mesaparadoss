@@ -637,6 +637,11 @@ export default function App() {
   }, []);
 
   /* ── Seed initial data if DB is empty ── */
+  // Load on mount so landing page shows real counts
+  useEffect(() => {
+    loadRestaurants();
+  }, []);
+
   useEffect(() => {
     if (page !== "app") return;
     (async () => {
@@ -692,9 +697,11 @@ export default function App() {
   }, [loadRestaurants]);
 
   /* ── Delete visited ── */
-  const deleteRestaurant = useCallback(async (id) => {
-    // Confirmación nativa para evitar borrados por error
-    const confirmacion = window.confirm("¿Seguro que quieres eliminar este restaurante de la lista?");
+  const deleteRestaurant = useCallback(async (id, name) => {
+    const pin = window.prompt(`Introduce el PIN para eliminar "${name}":`, "");
+    if (pin === null) return;
+    if (pin !== "2024") { alert("PIN incorrecto. No se ha eliminado ningún restaurante."); return; }
+    const confirmacion = window.confirm(`¿Seguro que quieres eliminar "${name}"? Esta acción no se puede deshacer.`);
     if (!confirmacion) return;
   
     try {
@@ -758,7 +765,7 @@ export default function App() {
     return rests.filter(r=>r.name.toLowerCase().includes(listSearch.toLowerCase())).sort((a,b)=>a.name.localeCompare(b.name));
   },[rests,listSearch]);
 
-  if (page==="front") return <><FontLoader/><FrontPage onEnter={()=>setPage("app")} total={rests.length||INITIAL_RESTAURANTS.length} visited={rests.filter(r=>r.visited).length||INITIAL_RESTAURANTS.filter(r=>r.visited).length}/></>;
+  if (page==="front") return <><FontLoader/><FrontPage onEnter={()=>setPage("app")} total={rests.length} visited={rests.filter(r=>r.visited).length}/></>;
 
   const TABS=[
     {id:"ranking",   label:"🏆 Ranking"},
@@ -882,7 +889,7 @@ export default function App() {
                         style={{padding:"6px 12px",borderRadius:8,fontSize:12,fontWeight:700,border:`1.5px solid ${r.comment?"var(--gold)":"var(--warm)"}`,background:r.comment?"#c9a84c22":"#fff",color:r.comment?"var(--gold)":"var(--muted)",cursor:"pointer",whiteSpace:"nowrap"}}>
                         {r.comment?"💬 Ver":"💬 Nota"}
                       </button>
-                      <button onClick={()=>deleteRestaurant(r.id)}
+                      <button onClick={()=>deleteRestaurant(r.id, r.name)}
                         style={{padding:"6px 12px",borderRadius:8,fontSize:12,fontWeight:700,border:"1.5px solid #e8b4b4",background:"#fff",color:"var(--red)",cursor:"pointer",whiteSpace:"nowrap"}}>
                         🗑️
                       </button>
