@@ -685,6 +685,14 @@ export default function App() {
     setCommentTarget(null);
   }, [loadRestaurants]);
 
+  /* ── Delete restaurant ── */
+  const deleteRestaurant = useCallback(async (id) => {
+    if (!window.confirm("¿Seguro que quieres eliminar este restaurante? Esta acción no se puede deshacer.")) return;
+    await supabase.from("ratings").delete().eq("restaurant_id", id);
+    await supabase.from("restaurants").delete().eq("id", id);
+    await loadRestaurants();
+  }, [loadRestaurants]);
+
   /* ── Mark visited ── */
   const markVisited = useCallback(async (id) => {
     await supabase.from("restaurants").update({ visited: true }).eq("id", id);
@@ -881,6 +889,10 @@ export default function App() {
                       <button onClick={()=>setCommentTarget(r)}
                         style={{padding:"6px 12px",borderRadius:8,fontSize:12,fontWeight:700,border:`1.5px solid ${r.comment?"var(--gold)":"var(--warm)"}`,background:r.comment?"#c9a84c22":"#fff",color:r.comment?"var(--gold)":"var(--muted)",cursor:"pointer",whiteSpace:"nowrap"}}>
                         {r.comment?"💬 Ver":"💬 Nota"}
+                      </button>
+                      <button onClick={()=>deleteRestaurant(r.id)}
+                        style={{padding:"6px 12px",borderRadius:8,fontSize:12,fontWeight:700,border:"1.5px solid #e8b4b4",background:"#fff",color:"var(--red)",cursor:"pointer",whiteSpace:"nowrap"}}>
+                        🗑️
                       </button>
                     </div>
                     {r.comment&&<p style={{fontSize:12,color:"var(--muted)",marginTop:6,fontStyle:"italic",paddingLeft:2,borderTop:"1px solid var(--warm)",paddingTop:8}}>💬 {r.comment}</p>}
