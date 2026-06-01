@@ -374,6 +374,25 @@ function RatingModal({restaurant,onSave,onClose}) {
   );
 }
 
+/* ─── DELETE MODAL ─── */
+function DeleteModal({restaurant,onConfirm,onClose}) {
+  const [unlocked,setUnlocked]=useState(false);
+  if (!unlocked) return <PinModal onSuccess={()=>setUnlocked(true)} onClose={onClose}/>;
+  return (
+    <Modal onClose={onClose}>
+      <div style={{textAlign:"center",paddingBottom:8}}>
+        <div style={{fontSize:42,marginBottom:12}}>🗑️</div>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--dark)",marginBottom:8}}>Eliminar restaurante</h2>
+        <p style={{color:"var(--muted)",fontSize:14,marginBottom:24}}>¿Seguro que quieres eliminar <strong style={{color:"var(--dark)"}}>{restaurant.name}</strong>? Esta acción no se puede deshacer.</p>
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={onClose} className="btn-o" style={{flex:1,padding:"12px",borderRadius:12,fontSize:14}}>Cancelar</button>
+          <button onClick={onConfirm} style={{flex:1,padding:"12px",borderRadius:12,fontSize:14,background:"var(--red)",color:"#fff",border:"none",cursor:"pointer",fontWeight:700}}>Eliminar</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 /* ─── COMMENT MODAL ─── */
 function CommentModal({restaurant,onSave,onClose}) {
   const [text,setText]=useState(restaurant.comment||"");
@@ -607,6 +626,7 @@ export default function App() {
   const [listSearch,setListSearch]=useState("");
   const [showFilters,setShowFilters]=useState(false);
   const [commentTarget,setCommentTarget]=useState(null);
+  const [deleteTarget,setDeleteTarget]=useState(null);
   const [filterType,setFilterType]=useState(null);
   const [showTypeFilter,setShowTypeFilter]=useState(false);
   const [dbError,setDbError]=useState(null);
@@ -637,7 +657,6 @@ export default function App() {
   }, []);
 
   /* ── Seed initial data if DB is empty ── */
-  // Load on mount so landing page shows real counts
   useEffect(() => {
     loadRestaurants();
   }, []);
@@ -697,11 +716,9 @@ export default function App() {
   }, [loadRestaurants]);
 
   /* ── Delete visited ── */
-  const deleteRestaurant = useCallback(async (id, name) => {
-    const pin = window.prompt(`Introduce el PIN para eliminar "${name}":`, "");
-    if (pin === null) return;
-    if (pin !== "2024") { alert("PIN incorrecto. No se ha eliminado ningún restaurante."); return; }
-    const confirmacion = window.confirm(`¿Seguro que quieres eliminar "${name}"? Esta acción no se puede deshacer.`);
+  const deleteRestaurant = useCallback(async (id) => {
+    // Confirmación nativa para evitar borrados por error
+    const confirmacion = window.confirm("¿Seguro que quieres eliminar este restaurante de la lista?");
     if (!confirmacion) return;
   
     try {
@@ -808,11 +825,11 @@ export default function App() {
             {rankingList.length>=1&&(()=>{
               const top3=rankingList.slice(0,3);
               const order=top3.length>=2?[top3[1],top3[0],top3[2]].filter(Boolean):[top3[0]];
-              return <div style={{marginBottom:28,background:"linear-gradient(135deg,var(--dark),var(--dark2))",borderRadius:20,padding:"22px 16px",display:"flex",gap:10,justifyContent:"center",alignItems:"flex-end"}}>
-                {order.map(r=>{const rk=rankingList.indexOf(r)+1;const isF=rk===1;return <div key={r.id} style={{textAlign:"center",flex:1,maxWidth:200,transform:isF?"scale(1.08)":"scale(1)"}}>
+              return <div style={{marginBottom:28,background:"linear-gradient(135deg,var(--dark),var(--dark2))",borderRadius:20,padding:"16px 8px",display:"flex",gap:4,justifyContent:"center",alignItems:"flex-end",overflowX:"hidden"}}>
+                {order.map(r=>{const rk=rankingList.indexOf(r)+1;const isF=rk===1;return <div key={r.id} style={{textAlign:"center",flex:1,minWidth:0,maxWidth:180,transform:isF?"scale(1.05)":"scale(1)"}}>
                   <div style={{fontSize:isF?28:20,marginBottom:8}}>{["🥇","🥈","🥉"][rk-1]}</div>
                   <ScoreBadge value={parseFloat(getAvg(r.ratings))} size={isF?58:46}/>
-                  <p style={{fontFamily:"'Playfair Display',serif",color:"var(--cream)",fontSize:isF?14:12,marginTop:10,fontWeight:700}}>{r.name}</p>
+                  <p style={{fontFamily:"'Playfair Display',serif",color:"var(--cream)",fontSize:isF?13:11,marginTop:8,fontWeight:700,lineHeight:1.2,wordBreak:"break-word",padding:"0 4px"}}>{r.name}</p>
                   {r.price_range&&<div style={{marginTop:4}}><PriceBadge priceKey={r.price_range}/></div>}
                 </div>;})}
               </div>;
@@ -889,7 +906,7 @@ export default function App() {
                         style={{padding:"6px 12px",borderRadius:8,fontSize:12,fontWeight:700,border:`1.5px solid ${r.comment?"var(--gold)":"var(--warm)"}`,background:r.comment?"#c9a84c22":"#fff",color:r.comment?"var(--gold)":"var(--muted)",cursor:"pointer",whiteSpace:"nowrap"}}>
                         {r.comment?"💬 Ver":"💬 Nota"}
                       </button>
-                      <button onClick={()=>deleteRestaurant(r.id, r.name)}
+                      <button onClick={()=>deleteRestaurant(r.id)}
                         style={{padding:"6px 12px",borderRadius:8,fontSize:12,fontWeight:700,border:"1.5px solid #e8b4b4",background:"#fff",color:"var(--red)",cursor:"pointer",whiteSpace:"nowrap"}}>
                         🗑️
                       </button>
@@ -961,6 +978,7 @@ export default function App() {
         </div>
       </div>
 
+      {deleteTarget&&<DeleteModal restaurant={deleteTarget} onConfirm={()=>{deleteRestaurant(deleteTarget.id);setDeleteTarget(null);}} onClose={()=>setDeleteTarget(null)}/>}
       {commentTarget&&<CommentModal restaurant={commentTarget} onSave={(text)=>saveComment(commentTarget.id,text)} onClose={()=>setCommentTarget(null)}/>}
       {target&&<RatingModal restaurant={target} onSave={(r,p,f,cm)=>saveRating(target.id,r,p,f,cm)} onClose={()=>setTarget(null)}/>}
       {showAdd&&<AddModal onSave={addRestaurant} onClose={()=>setShowAdd(false)}/>}
