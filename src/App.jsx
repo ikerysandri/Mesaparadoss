@@ -887,31 +887,35 @@ export default function App() {
                 const avg=getAvg(r.ratings);
                 const isVisited=r.visited;
                 return (
-                  <div key={r.id} className="card-h" style={{background:"#fff",borderRadius:12,padding:"14px 18px",border:`1.5px solid ${isVisited?"var(--gold)":"var(--warm)"}`,display:"flex",alignItems:"center",gap:12,borderLeft:`4px solid ${isVisited?"var(--gold)":"var(--warm)"}`}}>
-                    <div style={{flex:1}}>
-                      <p style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:"var(--dark)",marginBottom:3}}>{r.name}</p>
-                      <div style={{display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}}>
-                        <span style={{fontSize:11,color:isVisited?"var(--red)":"var(--muted)"}}>{isVisited?"✅ Visitado":"⏳ Pendiente"}</span>
-                        {r.food_type&&<span style={{fontSize:10,background:"#1a120812",color:"var(--text)",padding:"1px 7px",borderRadius:20,fontWeight:600}}>{r.food_type}</span>}
-                        {r.price_range&&<PriceBadge priceKey={r.price_range}/>}
+                  <div key={r.id} className="card-h" style={{background:"#fff",borderRadius:12,padding:"12px 14px",border:`1.5px solid ${isVisited?"var(--gold)":"var(--warm)"}`,display:"flex",flexDirection:"column",gap:8,borderLeft:`4px solid ${isVisited?"var(--gold)":"var(--warm)"}`}}>
+                    {/* Top row: name + score */}
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <p style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:"var(--dark)",marginBottom:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</p>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}}>
+                          <span style={{fontSize:11,color:isVisited?"var(--red)":"var(--muted)"}}>{isVisited?"✅ Visitado":"⏳ Pendiente"}</span>
+                          {r.food_type&&<span style={{fontSize:10,background:"#1a120812",color:"var(--text)",padding:"1px 7px",borderRadius:20,fontWeight:600}}>{r.food_type}</span>}
+                          {r.price_range&&<PriceBadge priceKey={r.price_range}/>}
+                        </div>
                       </div>
+                      {avg&&<ScoreBadge value={parseFloat(avg)} size={36}/>}
                     </div>
-                    <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      {avg&&<ScoreBadge value={parseFloat(avg)} size={38}/>}
+                    {/* Bottom row: buttons */}
+                    <div style={{display:"flex",gap:6}}>
                       <button onClick={()=>window.open(googleUrl(r.name),"_blank")} className="btn-g"
-                        style={{padding:"6px 12px",borderRadius:8,fontSize:12,fontWeight:700,border:"none",cursor:"pointer",whiteSpace:"nowrap"}}>
+                        style={{flex:1,padding:"7px 4px",borderRadius:8,fontSize:12,fontWeight:700,border:"none",cursor:"pointer",textAlign:"center"}}>
                         🔍 Google
                       </button>
                       <button onClick={()=>setCommentTarget(r)}
-                        style={{padding:"6px 12px",borderRadius:8,fontSize:12,fontWeight:700,border:`1.5px solid ${r.comment?"var(--gold)":"var(--warm)"}`,background:r.comment?"#c9a84c22":"#fff",color:r.comment?"var(--gold)":"var(--muted)",cursor:"pointer",whiteSpace:"nowrap"}}>
+                        style={{flex:1,padding:"7px 4px",borderRadius:8,fontSize:12,fontWeight:700,border:`1.5px solid ${r.comment?"var(--gold)":"var(--warm)"}`,background:r.comment?"#c9a84c22":"#fff",color:r.comment?"var(--gold)":"var(--muted)",cursor:"pointer",textAlign:"center"}}>
                         {r.comment?"💬 Ver":"💬 Nota"}
                       </button>
-                      <button onClick={()=>deleteRestaurant(r.id)}
-                        style={{padding:"6px 12px",borderRadius:8,fontSize:12,fontWeight:700,border:"1.5px solid #e8b4b4",background:"#fff",color:"var(--red)",cursor:"pointer",whiteSpace:"nowrap"}}>
+                      <button onClick={()=>setDeleteTarget(r)}
+                        style={{padding:"7px 10px",borderRadius:8,fontSize:13,border:"1.5px solid #e8b4b4",background:"#fff",color:"var(--red)",cursor:"pointer",fontWeight:700}}>
                         🗑️
                       </button>
                     </div>
-                    {r.comment&&<p style={{fontSize:12,color:"var(--muted)",marginTop:6,fontStyle:"italic",paddingLeft:2,borderTop:"1px solid var(--warm)",paddingTop:8}}>💬 {r.comment}</p>}
+                    {r.comment&&<p style={{fontSize:12,color:"var(--muted)",marginTop:2,fontStyle:"italic",borderTop:"1px solid var(--warm)",paddingTop:6}}>💬 {r.comment}</p>}
                   </div>
                 );
               })}
