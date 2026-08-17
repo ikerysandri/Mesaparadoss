@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { supabase } from "../supabase.js";
+import { db } from "./firebase.js";
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, addDoc, query, orderBy, where, getCountFromServer } from "firebase/firestore";
 
 /* ─── STYLES ─── */
 const FontLoader = () => (
@@ -631,27 +632,32 @@ export default function App() {
   const [showTypeFilter,setShowTypeFilter]=useState(false);
   const [dbError,setDbError]=useState(null);
 
-  /* ── Supabase: load all restaurants ── */
+  /* ── Firebase: load all restaurants ── */
   const loadRestaurants = useCallback(async () => {
     setLoading(true);
     setDbError(null);
     try {
-      const { data, error } = await supabase
-        .from("restaurants_with_ratings")
-        .select("*")
-        .order("name");
-      if (error) throw error;
-      const mapped = (data||[]).map(r => ({
-        ...r,
-        ratings: r.sabor != null ? {
-          sabor:r.sabor, rcp:r.rcp, ambiente:r.ambiente,
-          servicio:r.servicio, repetiria:r.repetiria, wow:r.wow, experiencia:r.experiencia
-        } : null,
-      }));
+      const [restSnap, ratSnap] = await Promise.all([
+        getDocs(query(collection(db, "restaurants"), orderBy("name"))),
+        getDocs(collection(db, "ratings")),
+      ]);
+      const ratingsMap = {};
+      ratSnap.docs.forEach(d => { ratingsMap[d.id] = d.data(); });
+      const mapped = restSnap.docs.map(d => {
+        const rat = ratingsMap[d.id];
+        return {
+          id: d.id,
+          ...d.data(),
+          ratings: rat ? {
+            sabor:rat.sabor, rcp:rat.rcp, ambiente:rat.ambiente,
+            servicio:rat.servicio, repetiria:rat.repetiria, wow:rat.wow, experiencia:rat.experiencia
+          } : null,
+        };
+      });
       setRests(mapped);
     } catch(e) {
       console.error("Error loading:", e);
-      setDbError("Error de conexión con la base de datos: " + e.message);
+      setDbError("Error de conexión: " + e.message);
     }
     setLoading(false);
   }, []);
@@ -665,13 +671,21 @@ export default function App() {
     if (page !== "app") return;
     (async () => {
       await loadRestaurants();
-      // Check if we need to seed
-      const { count } = await supabase.from("restaurants").select("*", {count:"exact",head:true});
-      if (count === 0) {
-        const { error } = await supabase.from("restaurants").insert(
-          INITIAL_RESTAURANTS.map(r => ({name:r.name, visited:r.visited, lat:r.lat, lng:r.lng}))
-        );
-        if (!error) await loadRestaurants();
+      // Seed if empty
+      const snap = await getCountFromServer(collection(db, "restaurants"));
+      if (snap.data().count === 0) {
+        const { SEED_DATA } = await import("./seed.js");
+        for (const r of SEED_DATA) {
+          const { sabor, rcp, ambiente, servicio, repetiria, wow, experiencia, ...rest } = r;
+          const ref = await addDoc(collection(db, "restaurants"), rest);
+          if (sabor != null) {
+            await setDoc(doc(db, "ratings", ref.id), {
+              sabor, rcp, ambiente, servicio, repetiria, wow, experiencia,
+              updated_at: new Date().toISOString()
+            });
+          }
+        }
+        await loadRestaurants();
       }
     })();
   }, [page]);
@@ -679,21 +693,16 @@ export default function App() {
   /* ── Save rating ── */
   const saveRating = useCallback(async (id, ratings, priceRange, foodType, comment) => {
     try {
-      const { error: err1 } = await supabase.from("restaurants").update({
+      await updateDoc(doc(db, "restaurants", id), {
         visited: true,
-        price_range: priceRange,
-        food_type: foodType,
-        comment: comment||null,
-      }).eq("id", id);
-      if (err1) throw err1;
-
-      const { error: err2 } = await supabase.from("ratings").upsert({
-        restaurant_id: id,
+        price_range: priceRange || null,
+        food_type: foodType || null,
+        comment: comment || null,
+      });
+      await setDoc(doc(db, "ratings", id), {
         ...ratings,
         updated_at: new Date().toISOString(),
-      }, { onConflict: "restaurant_id" });
-      if (err2) throw err2;
-
+      });
       await loadRestaurants();
       setTarget(null);
     } catch(e) {
@@ -704,57 +713,51 @@ export default function App() {
 
   /* ── Save comment ── */
   const saveComment = useCallback(async (id, comment) => {
-    await supabase.from("restaurants").update({ comment }).eq("id", id);
+    await updateDoc(doc(db, "restaurants", id), { comment: comment || null });
     await loadRestaurants();
     setCommentTarget(null);
   }, [loadRestaurants]);
 
   /* ── Mark visited ── */
   const markVisited = useCallback(async (id) => {
-    await supabase.from("restaurants").update({ visited: true }).eq("id", id);
+    await updateDoc(doc(db, "restaurants", id), { visited: true });
     await loadRestaurants();
   }, [loadRestaurants]);
 
-  /* ── Delete visited ── */
+  /* ── Delete restaurant ── */
   const deleteRestaurant = useCallback(async (id) => {
-    // Confirmación nativa para evitar borrados por error
-    const confirmacion = window.confirm("¿Seguro que quieres eliminar este restaurante de la lista?");
-    if (!confirmacion) return;
-  
     try {
-      const { error } = await supabase
-        .from("restaurants")
-        .delete()
-        .eq("id", id);
-  
-      if (error) throw error;
-  
-      // Actualizamos el estado local para quitar el restaurante de la vista de inmediato
-      setRests((prev) => prev.filter((r) => r.id !== id));
-    } catch (error) {
-      console.error("Error al eliminar el restaurante:", error);
-      alert("No se pudo eliminar el restaurante. Inténtalo de nuevo.");
+      await deleteDoc(doc(db, "ratings", id));
+      await deleteDoc(doc(db, "restaurants", id));
+      setRests(prev => prev.filter(r => r.id !== id));
+      setDeleteTarget(null);
+    } catch(e) {
+      console.error("Error al eliminar:", e);
+      alert("No se pudo eliminar. Inténtalo de nuevo.");
     }
   }, []);
 
   /* ── Add new restaurant ── */
   const addRestaurant = useCallback(async (data) => {
     try {
-      const { data: inserted, error } = await supabase.from("restaurants").insert([{
-        name: data.name, visited: data.visited,
-        price_range: data.price_range, food_type: data.food_type,
-        comment: data.comment||null,
-        lat: data.lat, lng: data.lng,
-      }]).select().single();
-      if (error) throw error;
-      if (data.ratings && inserted) {
-        await supabase.from("ratings").insert([{
-          restaurant_id: inserted.id, ...data.ratings,
+      const ref = await addDoc(collection(db, "restaurants"), {
+        name: data.name,
+        visited: data.visited,
+        price_range: data.price_range || null,
+        food_type: data.food_type || null,
+        comment: data.comment || null,
+        lat: data.lat,
+        lng: data.lng,
+        created_at: new Date().toISOString(),
+      });
+      if (data.ratings) {
+        await setDoc(doc(db, "ratings", ref.id), {
+          ...data.ratings,
           updated_at: new Date().toISOString(),
-        }]);
+        });
       }
       await loadRestaurants();
-    } catch(e) { console.error("Add error:", e); }
+    } catch(e) { console.error("Add error:", e); alert("Error al agregar: " + e.message); }
     setShowAdd(false);
   }, [loadRestaurants]);
 
