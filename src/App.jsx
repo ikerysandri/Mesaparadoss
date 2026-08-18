@@ -445,8 +445,8 @@ function AddModal({onSave,onClose}) {
 }
 
 /* ─── RANK CARD ─── */
-function RankCard({r,rank,onRate}) {
-  const avg=getAvg(r.ratings);
+function RankCard({r,rank,onRate,sortBy}) {
+  const avg=sortBy&&sortBy!=="avg"&&r.ratings?.[sortBy]!=null?Number(r.ratings[sortBy]).toFixed(1):getAvg(r.ratings);
   const [open,setOpen]=useState(false);
   const waze=`waze://?ll=${r.lat},${r.lng}&navigate=yes`;
   const wazeFb=`https://waze.com/ul?ll=${r.lat},${r.lng}&navigate=yes`;
@@ -831,7 +831,7 @@ export default function App() {
               return <div style={{marginBottom:28,background:"linear-gradient(135deg,var(--dark),var(--dark2))",borderRadius:20,padding:"16px 8px",display:"flex",gap:4,justifyContent:"center",alignItems:"flex-end",overflowX:"hidden"}}>
                 {order.map(r=>{const rk=rankingList.indexOf(r)+1;const isF=rk===1;return <div key={r.id} style={{textAlign:"center",flex:1,minWidth:0,maxWidth:180,transform:isF?"scale(1.05)":"scale(1)"}}>
                   <div style={{fontSize:isF?28:20,marginBottom:8}}>{["🥇","🥈","🥉"][rk-1]}</div>
-                  <ScoreBadge value={parseFloat(getAvg(r.ratings))} size={isF?58:46}/>
+                  <ScoreBadge value={parseFloat(sortBy&&sortBy!=="avg"&&r.ratings?.[sortBy]!=null?r.ratings[sortBy]:getAvg(r.ratings))} size={isF?58:46}/>
                   <p style={{fontFamily:"'Playfair Display',serif",color:"var(--cream)",fontSize:isF?13:11,marginTop:8,fontWeight:700,lineHeight:1.2,wordBreak:"break-word",padding:"0 4px"}}>{r.name}</p>
                   {r.price_range&&<div style={{marginTop:4}}><PriceBadge priceKey={r.price_range}/></div>}
                 </div>;})}
@@ -875,7 +875,7 @@ export default function App() {
                 </div>}
               </div>
             </div>
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>{rankingList.map((r,i)=><RankCard key={r.id} r={r} rank={i+1} onRate={setTarget}/>)}</div>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>{rankingList.map((r,i)=><RankCard key={r.id} r={r} rank={i+1} onRate={setTarget} sortBy={sortBy}/>)}</div>
             {rankingList.length>0&&<p style={{textAlign:"center",color:"var(--muted)",fontSize:12,marginTop:16}}>Top {rankingList.length} restaurantes puntuados</p>}
           </div>}
 
